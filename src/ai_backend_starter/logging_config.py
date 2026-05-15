@@ -14,19 +14,23 @@ class RequestIDFilter(logging.Filter):
         return True
 
 
+def _has_request_id_filter(handler: logging.Handler) -> bool:
+    return any(isinstance(log_filter, RequestIDFilter) for log_filter in handler.filters)
+
+
 def configure_logging() -> None:
     settings = get_settings()
     root_logger = logging.getLogger()
-
-    if root_logger.handlers:
-        return
-
-    handler = logging.StreamHandler()
-    handler.addFilter(RequestIDFilter())
-    handler.setFormatter(
-        JsonFormatter(
-            "%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s"
-        )
-    )
-    root_logger.addHandler(handler)
     root_logger.setLevel(settings.log_level.upper())
+
+    if not root_logger.handlers:
+        root_logger.addHandler(logging.StreamHandler())
+
+    formatter = JsonFormatter(
+        "%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s"
+    )
+
+    for handler in root_logger.handlers:
+        handler.setFormatter(formatter)
+        if not _has_request_id_filter(handler):
+            handler.addFilter(RequestIDFilter())
