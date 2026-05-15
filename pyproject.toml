@@ -7,7 +7,13 @@ authors = [
     { name = "Manuel Blinkert", email = "82281928+manuelblinkert@users.noreply.github.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "fastapi>=0.136.1",
+    "openai>=2.36.0",
+    "pydantic-settings>=2.14.1",
+    "python-json-logger>=4.1.0",
+    "uvicorn>=0.47.0",
+]
 
 [project.scripts]
 ai-backend-production-starter = "ai_backend_production_starter:main"
