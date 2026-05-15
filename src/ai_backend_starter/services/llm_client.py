@@ -1,9 +1,10 @@
 from functools import lru_cache
 
-from fastapi import HTTPException, status
 from openai import AsyncOpenAI
+from openai import OpenAIError
 
 from ai_backend_starter.config import get_settings
+from ai_backend_starter.core.errors import LLMProviderUnavailableError
 
 
 class LLMClient:
@@ -14,15 +15,16 @@ class LLMClient:
 
     async def complete(self, messages: list[dict[str, str]]) -> str:
         if self._client is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="OPENAI_API_KEY is not configured.",
-            )
+            raise LLMProviderUnavailableError("OPENAI_API_KEY is not configured.")
 
-        response = await self._client.responses.create(
-            model=self.model_name,
-            input=messages,
-        )
+        try:
+            response = await self._client.responses.create(
+                model=self.model_name,
+                input=messages,
+            )
+        except OpenAIError as exc:
+            raise LLMProviderUnavailableError() from exc
+
         return response.output_text
 
 

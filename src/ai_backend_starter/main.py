@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
 
 from ai_backend_starter.config import get_settings
+from ai_backend_starter.core.errors import LLMProviderUnavailableError
 from ai_backend_starter.logging_config import configure_logging
 from ai_backend_starter.middleware import RequestIDMiddleware
 from ai_backend_starter.routes.health import router as health_router
@@ -20,6 +22,18 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
     app.add_middleware(RequestIDMiddleware)
+
+    @app.exception_handler(LLMProviderUnavailableError)
+    async def handle_llm_provider_unavailable(
+        request: Request,
+        exc: LLMProviderUnavailableError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": exc.detail},
+            headers={"x-request-id": getattr(request.state, "request_id", "-")},
+        )
+
     app.include_router(health_router)
     app.include_router(llm_router, prefix="/v1")
     return app
