@@ -1,0 +1,17 @@
+[project]
+name = "ai-backend-production-starter"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Manuel Blinkert", email = "82281928+manuelblinkert@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+ai-backend-production-starter = "ai_backend_production_starter:main"
+
+[build-system]
+requires = ["uv_build>=0.9.6,<0.10.0"]
+build-backend = "uv_build"
