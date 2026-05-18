@@ -40,6 +40,16 @@ Backend engineers and AI systems architects who want a clean, minimal reference 
 - Not a multi-agent framework
 - Not a complete production platform
 
+## Adapting This for a Real Project
+
+Clone the repo and use it as your starting point:
+
+1. Rename the package from `ai_backend_starter` to your project name — update `src/`, `pyproject.toml`, all imports, and the Dockerfile.
+2. Replace `/v1/ai-tasks/analyze` with your actual use case endpoint.
+3. Keep the route / service / schema separation as the project grows.
+4. Add project-specific providers or workflows inside `services/`.
+5. Add database, auth, or queues only when the real use case requires them — not upfront.
+
 ## Architecture Overview
 
 ```mermaid
