@@ -1,6 +1,3 @@
-from ai_backend_starter.core.errors import (
-    ConfigurationError,
-    LLMProviderUnavailableError,
-)
+from ai_backend_starter.core.errors import LLMProviderUnavailableError
 
-__all__ = ["ConfigurationError", "LLMProviderUnavailableError"]
+__all__ = ["LLMProviderUnavailableError"]

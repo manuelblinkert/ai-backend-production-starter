@@ -1,22 +1,35 @@
 # ai-backend-production-starter
 
-`ai-backend-production-starter` is a small, production-minded starter for FastAPI backends that call AI/LLM providers.
+[![CI](https://github.com/manuelblinkert/ai-backend-production-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/manuelblinkert/ai-backend-production-starter/actions/workflows/ci.yml)
 
-It is intended as a clean public showcase repository, not a full platform.
+A production-minded FastAPI starter for backends that call AI/LLM providers.
+
+This is a public showcase repository, not a full platform. It demonstrates the structural patterns, operational defaults, and testing approach I apply when building AI backend services professionally.
 
 ## Status
 
-Version: `v0.1`
+Version: `v0.1` — intentionally small. It demonstrates structure and defaults, not a complete AI platform.
 
-This repo is intentionally small. It demonstrates structure and production-minded defaults, not a complete AI platform.
+## Who Is This For
 
-## What This Repo Is
+Backend engineers and AI systems architects who want a clean, minimal reference for:
 
-- A small FastAPI backend starter
-- An example of route, service, schema, and core separation
-- A simple baseline for environment-based config, structured logging, and request IDs
-- A minimal example of keeping LLM provider access out of route handlers
-- A testable structure where the LLM client can be replaced in tests
+- how to structure a FastAPI service that calls an LLM provider
+- how to keep routes, services, schemas, and provider clients properly separated
+- how to set up structured logging, request IDs, and error handling from the start
+- how to write tests that stub the LLM client without hitting a real API
+
+## What This Repo Demonstrates
+
+- Route / service / schema separation with clear boundaries
+- LLM provider access isolated in a service class, not in route handlers
+- Pydantic schemas for typed request and response validation
+- Environment-based configuration via `pydantic-settings`
+- Structured JSON logging with per-request IDs propagated via `ContextVar`
+- `x-request-id` header on every response (generated or forwarded)
+- Structured `503` response when the LLM provider is unavailable
+- Dependency injection so tests can replace the LLM client without mocking internals
+- Docker and Compose setup with non-root container user and health check
 
 ## What This Repo Is Not
 
@@ -31,25 +44,24 @@ This repo is intentionally small. It demonstrates structure and production-minde
 
 ```mermaid
 flowchart TD
-    Client[Client] --> API[FastAPI Route]
+    Client[Client] --> MW[RequestID Middleware]
+    MW --> API[FastAPI Route]
     API --> Schema[Pydantic Schemas]
     API --> Service[Service Layer]
     Service --> Prompt[Prompt Builder]
     Service --> LLM[LLM Provider Client]
-    API --> Logs[Structured Logs + Request ID]
+    API --> Logs[Structured JSON Logs]
 ```
 
-- `routes/` contains HTTP endpoint handlers
-- `services/` contains prompt-building and LLM client logic
-- `schemas/` contains typed Pydantic request and response models
-- `core/` contains shared application exceptions
-- `config.py` loads environment-based settings
-- `middleware.py` generates request IDs and logs request completion
-- `logging_config.py` sets up structured JSON logging
+- `routes/` — HTTP endpoint handlers (thin, no business logic)
+- `services/` — prompt building and LLM client
+- `schemas/` — Pydantic request and response models
+- `core/` — shared application exceptions
+- `config.py` — environment-based settings via `pydantic-settings`
+- `middleware.py` — request ID generation and request completion logging
+- `logging_config.py` — structured JSON logging setup
 
-The `POST /v1/ai-tasks/analyze` endpoint accepts a small prompt payload, builds provider input in a service, and delegates the external call to `LLMClient`.
-
-Tests can override that client dependency without calling a real external API.
+The `POST /v1/ai-tasks/analyze` endpoint accepts a prompt payload, builds provider input in a service, and delegates the external call to `LLMClient`. Tests override that client dependency without touching a real API.
 
 ## Folder Structure
 
@@ -75,6 +87,7 @@ ai-backend-production-starter/
       core/
 
   tests/
+  .github/workflows/ci.yml
 ```
 
 ## Quick Start
@@ -104,9 +117,7 @@ Copy `.env.example` to `.env` and adjust values as needed.
 | `OPENAI_API_KEY` | Provider API key | empty |
 | `OPENAI_MODEL` | Provider model name | `gpt-4.1-mini` |
 
-Secrets are read from environment variables only.
-
-`.env.example` contains placeholders only.
+Secrets are read from environment variables only. `.env.example` contains placeholders only.
 
 ## Local Run Commands
 
@@ -122,7 +133,7 @@ Run the API:
 uv run uvicorn ai_backend_starter.main:app --reload
 ```
 
-## Test And Lint Commands
+## Test and Lint
 
 Run tests:
 
@@ -138,15 +149,10 @@ uv run ruff check .
 
 ## Docker
 
-Build the image:
+Build and run:
 
 ```bash
 docker build -t ai-backend-production-starter .
-```
-
-Run the image:
-
-```bash
 docker run --rm -p 8000:8000 --env-file .env ai-backend-production-starter
 ```
 
@@ -158,19 +164,14 @@ docker compose up --build
 
 ## Endpoints
 
-- `GET /health`
-- `POST /v1/ai-tasks/analyze`
-
 ### `GET /health`
 
 ```bash
 curl http://localhost:8000/health
 ```
 
-Example response:
-
 ```json
-{"status":"ok"}
+{"status": "ok"}
 ```
 
 ### `POST /v1/ai-tasks/analyze`
@@ -178,10 +179,10 @@ Example response:
 ```bash
 curl -X POST http://localhost:8000/v1/ai-tasks/analyze \
   -H "Content-Type: application/json" \
-  -d "{\"prompt\":\"Summarize this text\",\"system_prompt\":\"Be concise\"}"
+  -d '{"prompt": "Summarize this text", "system_prompt": "Be concise"}'
 ```
 
-Example success response:
+Success:
 
 ```json
 {
@@ -190,7 +191,7 @@ Example success response:
 }
 ```
 
-Example provider/config failure response:
+Provider or config failure (503):
 
 ```json
 {
@@ -200,9 +201,7 @@ Example provider/config failure response:
 
 ## Structured Logging
 
-The app logs request completion with a request ID, method, path, status code, and duration.
-
-Example request log:
+Every request logs a completion entry with request ID, method, path, status code, and duration. The `x-request-id` header is present on every response.
 
 ```json
 {
@@ -218,31 +217,28 @@ Example request log:
 }
 ```
 
-Each response also includes an `x-request-id` header.
-
 ## Design Decisions
 
-- Keep route handlers thin
-- Keep provider access in a service class
-- Use Pydantic schemas for typed request and response models
-- Use dependency injection so tests can replace the LLM client
-- Use environment variables for configuration and secrets
-- Use structured JSON logging with request IDs
-- Return a structured `503` response when the LLM provider is unavailable
-- Keep the project intentionally small instead of hiding complexity behind unnecessary abstractions
+- Route handlers are thin — no business logic, no provider calls
+- Provider access lives in a service class behind a dependency-injected interface
+- Pydantic schemas enforce typed request and response contracts
+- `LLMClient` is injected via `Depends()` so tests can swap it without mocking internals
+- Configuration and secrets come from environment variables only
+- Structured JSON logging with request IDs from the start, not as an afterthought
+- `503` responses are structured and include the same `x-request-id` as successful responses
+- Intentionally small — complexity is not hidden behind abstractions
 
 ## Limitations
 
-- Only one provider client is included
-- The request and response models are intentionally small
-- Error handling is intentionally simple
-- There is no persistence, auth, RAG, background processing, or queue system
-- Uvicorn startup and access logs may still use Uvicorn's default formatting; application request logs are structured JSON
+- Only one provider client (OpenAI Responses API)
+- Request and response models are intentionally minimal
+- Error handling covers the provider-unavailable case; edge cases are not exhaustive
+- No persistence, auth, RAG, background processing, or queue system
+- Uvicorn access logs use Uvicorn's default format; application logs are structured JSON
 
 ## Roadmap
 
-- Add lightweight CI for lint and test checks
 - Add a cleaner provider interface if more providers are introduced
-- Expand test coverage for validation and failure cases
-- Add optional type checking
-- Add an example deployment configuration later, without turning this repo into an infrastructure platform
+- Expand test coverage for validation and failure edge cases
+- Add optional type checking pass with mypy
+- Add an example deployment configuration

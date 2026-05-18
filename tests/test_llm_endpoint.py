@@ -24,13 +24,13 @@ client = TestClient(app)
 
 def test_llm_endpoint_returns_stubbed_completion() -> None:
     app.dependency_overrides[get_llm_client] = lambda: StubLLMClient()
-
-    response = client.post(
-        "/v1/ai-tasks/analyze",
-        json={"prompt": "Say hello", "system_prompt": "Be concise"},
-    )
-
-    app.dependency_overrides.clear()
+    try:
+        response = client.post(
+            "/v1/ai-tasks/analyze",
+            json={"prompt": "Say hello", "system_prompt": "Be concise"},
+        )
+    finally:
+        app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert response.json() == {
@@ -39,15 +39,25 @@ def test_llm_endpoint_returns_stubbed_completion() -> None:
     }
 
 
-def test_llm_endpoint_returns_structured_503_on_provider_failure() -> None:
-    app.dependency_overrides[get_llm_client] = lambda: FailingStubLLMClient()
-
+def test_llm_endpoint_rejects_empty_prompt() -> None:
     response = client.post(
         "/v1/ai-tasks/analyze",
-        json={"prompt": "Say hello"},
+        json={"prompt": ""},
     )
 
-    app.dependency_overrides.clear()
+    assert response.status_code == 422
+    assert "x-request-id" in response.headers
+
+
+def test_llm_endpoint_returns_structured_503_on_provider_failure() -> None:
+    app.dependency_overrides[get_llm_client] = lambda: FailingStubLLMClient()
+    try:
+        response = client.post(
+            "/v1/ai-tasks/analyze",
+            json={"prompt": "Say hello"},
+        )
+    finally:
+        app.dependency_overrides.clear()
 
     assert response.status_code == 503
     assert response.json() == {"detail": "OPENAI_API_KEY is not configured."}

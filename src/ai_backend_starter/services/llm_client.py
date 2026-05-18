@@ -1,7 +1,6 @@
 from functools import lru_cache
 
-from openai import AsyncOpenAI
-from openai import OpenAIError
+from openai import AsyncOpenAI, OpenAIError
 
 from ai_backend_starter.config import get_settings
 from ai_backend_starter.core.errors import LLMProviderUnavailableError

@@ -15,7 +15,9 @@ class RequestIDFilter(logging.Filter):
 
 
 def _has_request_id_filter(handler: logging.Handler) -> bool:
-    return any(isinstance(log_filter, RequestIDFilter) for log_filter in handler.filters)
+    return any(
+        isinstance(log_filter, RequestIDFilter) for log_filter in handler.filters
+    )
 
 
 def configure_logging() -> None:

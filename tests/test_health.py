@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 
 from ai_backend_starter.main import app
 
-
 client = TestClient(app)
 
 

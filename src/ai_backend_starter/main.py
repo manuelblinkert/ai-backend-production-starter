@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
@@ -10,11 +11,17 @@ from ai_backend_starter.middleware import RequestIDMiddleware
 from ai_backend_starter.routes.health import router as health_router
 from ai_backend_starter.routes.llm import router as llm_router
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     configure_logging()
-    get_settings()
+    settings = get_settings()
+    if not settings.openai_api_key:
+        logger.warning(
+            "OPENAI_API_KEY is not configured; LLM endpoint will return 503."
+        )
     yield
 
 
